@@ -1,0 +1,52 @@
+<html>
+<head>
+    <title>ToDo</title>
+    <style type="text/css">
+        table, td, th {
+            border-collapse: collapse;
+            border: 3px solid #245488;
+        }
+
+        td, th {
+            padding: 10px 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <form action="/all_tasks" method="POST">
+        <input type="submit" value="Обновить">
+    </form>
+    <a href="/add_new_task" class="button">Добавить новое задание</a>
+    <br>
+    {{if .}}
+    <h1>TASKS:</h1>
+    <table>
+        <tr>
+            <td>ID</td>
+            <td>Название</td>
+            <td>Комментарий</td>
+            <td>Дата создания</td>
+            <td>Дедлайн</td>
+            <td>Заплалнировано на</td>
+            <td>Изменить</td>
+            <td>Удалить</td>
+        </tr>
+        {{range .}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Name}}</td>
+                <td>{{.Comment}}</td>
+                <td>{{.CreateDate}}</td>
+                <td>{{.Deadline}}</td>
+                <td>{{.AppointmentDate}}</td>
+                <td><a href="/update/?id={{.ID}}" class="button">Изменить</a></td>
+                <td><a href="/delete/?id={{.ID}}" class="button">Удалить</a></td>
+            </tr>
+        {{end}}
+    </table>
+    {{else}}
+        <h3>no data</h3>
+    {{end}}
+</body>
+</html>
