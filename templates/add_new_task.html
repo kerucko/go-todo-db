@@ -6,23 +6,15 @@
 </head>
 <body>
 <h1>НОВОЕ ЗАДАНИЕ</h1>
-<form action="/add_new_task" method="POST">
-    <label for="name">Название:</label>
-    <br>
-    <input type="text" id="name" name="name">
-    <br><br>
-    <label for="comment">Комментарий:</label>
-    <br>
-    <textarea id="comment" name="comment" rows="4" cols="30"></textarea>
-    <br><br>
-    <label for="deadline">Дедлайн:</label>
-    <br>
-    <input type="date" id="deadline" name="deadline">
-    <br><br>
-    <label for="appointmentDate">Запланировано на:</label>
-    <br>
-    <input type="date" id="appointmentDate" name="appointmentDate">
-    <br><br>
+<form action="/add" method="POST">
+    <label for="name">Название:</label><br>
+    <input type="text" id="name" name="name"><br><br>
+    <label for="comment">Комментарий:</label><br>
+    <textarea id="comment" name="comment" rows="4" cols="30"></textarea><br><br>
+    <label for="deadline">Дедлайн:</label><br>
+    <input type="date" id="deadline" name="deadline"><br><br>
+    <label for="appointmentDate">Запланировано на:</label><br>
+    <input type="date" id="appointmentDate" name="appointmentDate"><br><br>
     <input type="submit" value="Добавить">
 </form>
 
@@ -31,6 +23,6 @@
 <h3>{{.}}</h3>
 {{end}}
 <br>
-<a href="/all_tasks" class="button">К списку</a>
+<a href="/show" class="button">К списку</a>
 </body>
 </html>
