@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"html/template"
 	"log"
@@ -86,19 +87,38 @@ func addNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{ADD POST}")
 	r.ParseForm()
 	name := r.FormValue("name")
+	if name == "" {
+		err := tpl.ExecuteTemplate(w, "result.html", "Неправильные введенные данные")
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+	name = "'" + name + "'"
 	comment := r.FormValue("comment")
+	comment = "'" + comment + "'"
 	deadline := r.FormValue("deadline")
+	if deadline == "" {
+		deadline = "NULL"
+	} else {
+		deadline = "'" + deadline + "'"
+	}
 	appointmentDate := r.FormValue("appointmentDate")
+	if appointmentDate == "" {
+		appointmentDate = "NULL"
+	} else {
+		appointmentDate = "'" + appointmentDate + "'"
+	}
 	log.Println(name, comment, deadline, appointmentDate)
 
-	stmt, err := db.Prepare("INSERT INTO test (name, comment, createDate, deadline, appointmentDate) VALUES (?, ?, NOW(), ?, ?);")
+	stmt, err := db.Prepare(fmt.Sprintf("INSERT INTO test (name, comment, createDate, deadline, appointmentDate) VALUES (%s, %s, NOW(), %s, %s);", name, comment, deadline, appointmentDate))
 	if err != nil {
 		log.Println("stmt error")
 		panic(err)
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(name, comment, deadline, appointmentDate)
+	res, err := stmt.Exec()
 	if err != nil {
 		log.Println("error insert: ", err)
 		panic(err)
@@ -106,11 +126,11 @@ func addNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	rowsAf, _ := res.RowsAffected()
 	if err != nil || rowsAf != 1 {
 		log.Println("Error insert:", err)
-		tpl.ExecuteTemplate(w, "add_new_task.html", "ERROR")
+		tpl.ExecuteTemplate(w, "result.html", "Ошибка")
 		return
 	}
 
-	err = tpl.ExecuteTemplate(w, "add_new_task.html", "Success")
+	err = tpl.ExecuteTemplate(w, "result.html", "Задача добавлена успешно")
 	if err != nil {
 		panic(err)
 	}
@@ -141,22 +161,34 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateResultHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("{UPDATE RESULT")
+	log.Println("{UPDATE RESULT}")
 	r.ParseForm()
 	id := r.FormValue("id")
 	name := r.FormValue("name")
+	name = "'" + name + "'"
 	comment := r.FormValue("comment")
+	comment = "'" + comment + "'"
 	deadline := r.FormValue("deadline")
+	if deadline == "" {
+		deadline = "NULL"
+	} else {
+		deadline = "'" + deadline + "'"
+	}
 	appointmentDate := r.FormValue("appointmentDate")
+	if appointmentDate == "" {
+		appointmentDate = "NULL"
+	} else {
+		appointmentDate = "'" + appointmentDate + "'"
+	}
 	log.Println(id, name, comment, deadline, appointmentDate)
 
-	stmt, err := db.Prepare("UPDATE test SET name=?, comment=?, deadline=?, appointmentDate=? WHERE id=?")
+	stmt, err := db.Prepare(fmt.Sprintf("UPDATE test SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
 	if err != nil {
 		panic(err)
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(name, comment, deadline, appointmentDate, id)
+	res, err := stmt.Exec()
 	if err != nil {
 		panic(err)
 	}

@@ -17,7 +17,10 @@
     <form action="/show" method="POST">
         <input type="submit" value="Обновить">
     </form>
-    <a href="/add" class="button">Добавить новое задание</a>
+    <form action="/add">
+        <input type="submit" value="Добавить новое задание">
+    </form>
+<!--    <a href="/add" class="button">Добавить новое задание</a>-->
     <br>
     {{if .}}
     <h1>TASKS:</h1>
