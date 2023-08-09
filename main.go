@@ -44,6 +44,8 @@ func main() {
 	http.HandleFunc("/update/", updateTaskHandler)
 	http.HandleFunc("/update_result/", updateResultHandler)
 	http.HandleFunc("/delete/", deleteTaskHandler)
+	http.HandleFunc("/sort", SortHandler)
+	http.HandleFunc("/today", TodayHandler)
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
@@ -51,7 +53,7 @@ func main() {
 }
 
 func showTasksHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("{MAIN POST}")
+	log.Println("{MAIN}")
 	rows, err := db.Query("SELECT * FROM test")
 	if err != nil {
 		panic(err)
@@ -225,6 +227,72 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = tpl.ExecuteTemplate(w, "result.html", "Задача успешно удалена")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func SortHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	filter := r.FormValue("sort")
+	var stmt string
+	if filter == "дедлайну" {
+		stmt = "SELECT * FROM test WHERE deadline IS NOT NULL ORDER BY deadline;"
+	} else if filter == "дате создания" {
+		stmt = "SELECT * FROM test WHERE createDate IS NOT NULL ORDER BY createDate;"
+	} else {
+		stmt = "SELECT * FROM test WHERE appointmentDate IS NOT NULL ORDER BY appointmentDate;"
+	}
+
+	rows, err := db.Query(stmt)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var createDate, deadline, appointmentDate []uint8
+		err := rows.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate)
+		if err != nil {
+			panic(err)
+		}
+		t.CreateDate = string(createDate)
+		t.Deadline = string(deadline)
+		t.AppointmentDate = string(appointmentDate)
+		tasks = append(tasks, t)
+	}
+
+	err = tpl.ExecuteTemplate(w, "main_page.html", tasks)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TodayHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("{TODAY}")
+	rows, err := db.Query("SELECT * FROM test WHERE appointmentDate=DATE(NOW());")
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var createDate, deadline, appointmentDate []uint8
+		err := rows.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate)
+		if err != nil {
+			panic(err)
+		}
+		t.CreateDate = string(createDate)
+		t.Deadline = string(deadline)
+		t.AppointmentDate = string(appointmentDate)
+		tasks = append(tasks, t)
+	}
+
+	err = tpl.ExecuteTemplate(w, "main_page.html", tasks)
 	if err != nil {
 		panic(err)
 	}

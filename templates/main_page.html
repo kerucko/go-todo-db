@@ -2,7 +2,7 @@
 <head>
     <title>ToDo</title>
     <style type="text/css">
-        table, td, th {
+        .tasks {
             border-collapse: collapse;
             border: 3px solid #245488;
         }
@@ -14,37 +14,58 @@
     </style>
 </head>
 <body>
+<table>
+    <tr>
+        <td>
     <form action="/show" method="POST">
-        <input type="submit" value="Обновить">
+        <input type="submit" value="Показать все">
     </form>
+        </td>
+        <td>
     <form action="/add">
         <input type="submit" value="Добавить новое задание">
     </form>
-<!--    <a href="/add" class="button">Добавить новое задание</a>-->
-    <br>
+        </td>
+        <td>
+    <form action="/sort">
+        <input type="submit" value="сортировать по:">
+        <select name="sort">
+            <option>дедлайну</option>
+            <option>дате создания</option>
+            <option>дате выполнения</option>
+        </select>
+    </form>
+        </td>
+        <td>
+    <form action="/today">
+        <input type="submit" value="Сегодня">
+    </form>
+        </td>
+    </tr>
+</table>
     {{if .}}
     <h1>TASKS:</h1>
-    <table>
-        <tr>
-            <td>ID</td>
-            <td>Название</td>
-            <td>Комментарий</td>
-            <td>Дата создания</td>
-            <td>Дедлайн</td>
-            <td>Заплалнировано на</td>
-            <td>Изменить</td>
-            <td>Удалить</td>
+    <table class="tasks">
+        <tr class="tasks">
+            <td class="tasks">ID</td>
+            <td class="tasks">Название</td>
+            <td class="tasks">Комментарий</td>
+            <td class="tasks">Дата создания</td>
+            <td class="tasks">Дедлайн</td>
+            <td class="tasks">Заплалнировано на</td>
+            <td class="tasks">Изменить</td>
+            <td class="tasks">Удалить</td>
         </tr>
         {{range .}}
-            <tr>
-                <td>{{.ID}}</td>
-                <td>{{.Name}}</td>
-                <td>{{.Comment}}</td>
-                <td>{{.CreateDate}}</td>
-                <td>{{.Deadline}}</td>
-                <td>{{.AppointmentDate}}</td>
-                <td><a href="/update/?id={{.ID}}" class="button">Изменить</a></td>
-                <td><a href="/delete/?id={{.ID}}" class="button">Удалить</a></td>
+            <tr class="tasks">
+                <td class="tasks">{{.ID}}</td>
+                <td class="tasks">{{.Name}}</td>
+                <td class="tasks">{{.Comment}}</td>
+                <td class="tasks">{{.CreateDate}}</td>
+                <td class="tasks">{{.Deadline}}</td>
+                <td class="tasks">{{.AppointmentDate}}</td>
+                <td class="tasks"><a href="/update/?id={{.ID}}" class="button">Изменить</a></td>
+                <td class="tasks"><a href="/delete/?id={{.ID}}" class="button">Удалить</a></td>
             </tr>
         {{end}}
     </table>
