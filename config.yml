@@ -1,0 +1,5 @@
+host: localhost
+port: 3306
+user: root
+password: mysql_password1
+database: todo
