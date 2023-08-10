@@ -16,16 +16,14 @@ type Task struct {
 	CreateDate      string
 	Deadline        string
 	AppointmentDate string
+	FinishDate      string
 }
 
-var (
-	TPL *template.Template
-	//db  *sql.DB = database.DB
-)
+var TPL *template.Template
 
 func ShowTasksHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{MAIN}")
-	rows, err := database.DB.Query("SELECT * FROM todo.test")
+	rows, err := database.DB.Query("SELECT * FROM todo.tasks")
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +82,7 @@ func AddNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(name, comment, deadline, appointmentDate)
 
-	stmt, err := database.DB.Prepare(fmt.Sprintf("INSERT INTO todo.test (name, comment, createDate, deadline, appointmentDate) VALUES (%s, %s, NOW(), %s, %s);", name, comment, deadline, appointmentDate))
+	stmt, err := database.DB.Prepare(fmt.Sprintf("INSERT INTO todo.tasks (name, comment, createDate, deadline, appointmentDate) VALUES (%s, %s, NOW(), %s, %s);", name, comment, deadline, appointmentDate))
 	if err != nil {
 		log.Println("stmt error")
 		panic(err)
@@ -114,7 +112,7 @@ func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	log.Println("{UPDATE", id, "}")
 
-	row := database.DB.QueryRow("SELECT * FROM todo.test WHERE (id = ?);", id)
+	row := database.DB.QueryRow("SELECT * FROM todo.tasks WHERE (id = ?);", id)
 
 	var t Task
 	var createDate, deadline, appointmentDate []uint8
@@ -155,7 +153,7 @@ func UpdateResultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(id, name, comment, deadline, appointmentDate)
 
-	stmt, err := database.DB.Prepare(fmt.Sprintf("UPDATE todo.test SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
+	stmt, err := database.DB.Prepare(fmt.Sprintf("UPDATE todo.tasks SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
 	if err != nil {
 		panic(err)
 	}
@@ -183,7 +181,7 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	log.Println("{DELETE", id, "}")
 
-	stmt, err := database.DB.Prepare("DELETE FROM todo.test WHERE (id = ?);")
+	stmt, err := database.DB.Prepare("DELETE FROM todo.tasks WHERE (id = ?);")
 	if err != nil {
 		panic(err)
 	}
@@ -208,11 +206,11 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 	filter := r.FormValue("sort")
 	var stmt string
 	if filter == "дедлайну" {
-		stmt = "SELECT * FROM todo.test WHERE deadline IS NOT NULL ORDER BY deadline;"
+		stmt = "SELECT * FROM todo.tasks WHERE deadline IS NOT NULL ORDER BY deadline;"
 	} else if filter == "дате создания" {
-		stmt = "SELECT * FROM todo.test WHERE createDate IS NOT NULL ORDER BY createDate;"
+		stmt = "SELECT * FROM todo.tasks WHERE createDate IS NOT NULL ORDER BY createDate;"
 	} else {
-		stmt = "SELECT * FROM todo.test WHERE appointmentDate IS NOT NULL ORDER BY appointmentDate;"
+		stmt = "SELECT * FROM todo.tasks WHERE appointmentDate IS NOT NULL ORDER BY appointmentDate;"
 	}
 
 	rows, err := database.DB.Query(stmt)
@@ -243,7 +241,7 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 
 func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{TODAY}")
-	rows, err := database.DB.Query("SELECT * FROM todo.test WHERE appointmentDate=DATE(NOW());")
+	rows, err := database.DB.Query("SELECT * FROM todo.tasks WHERE appointmentDate=DATE(NOW());")
 	if err != nil {
 		panic(err)
 	}
@@ -264,6 +262,177 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = TPL.ExecuteTemplate(w, "main_page.html", tasks)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func DoneHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+	id := r.FormValue("id")
+
+	row := database.DB.QueryRow("SELECT * FROM todo.tasks WHERE id=?;", id)
+	var t Task
+	var createDate, deadline, appointmentDate []uint8
+	err = row.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate)
+	if err != nil {
+		panic(err)
+	}
+	t.CreateDate = string(createDate)
+	t.Deadline = string(deadline)
+	t.AppointmentDate = string(appointmentDate)
+	if t.Deadline == "" {
+		t.Deadline = "NULL"
+	} else {
+		t.Deadline = "'" + t.Deadline + "'"
+	}
+	if t.AppointmentDate == "" {
+		t.AppointmentDate = "NULL"
+	} else {
+		t.AppointmentDate = "'" + t.AppointmentDate + "'"
+	}
+	log.Println(t)
+
+	stmtInsert, err := database.DB.Prepare(fmt.Sprintf("INSERT INTO todo.completed (id, name, comment, createDate, deadline, appointmentDate, finishDate) VALUES (%s, '%s', '%s', '%s', %s, %s, NOW());", id, t.Name, t.Comment, t.CreateDate, t.Deadline, t.AppointmentDate))
+	if err != nil {
+		log.Println("stmt error")
+		panic(err)
+	}
+	defer stmtInsert.Close()
+
+	res, err := stmtInsert.Exec()
+	if err != nil {
+		log.Println("error insert in completed: ", err)
+		panic(err)
+	}
+	rowsAf, _ := res.RowsAffected()
+	if err != nil || rowsAf != 1 {
+		log.Println("Error insert in completed:", err)
+		err := TPL.ExecuteTemplate(w, "result.html", "Ошибка")
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	stmtDelete, err := database.DB.Prepare("DELETE FROM todo.tasks WHERE (id = ?);")
+	if err != nil {
+		panic(err)
+	}
+	defer stmtDelete.Close()
+	res, err = stmtDelete.Exec(id)
+	if err != nil {
+		panic(err)
+	}
+	rowsAf, _ = res.RowsAffected()
+	if rowsAf != 1 {
+		log.Println("ERROR: ", rowsAf)
+	}
+
+	err = TPL.ExecuteTemplate(w, "result.html", "Задача выполнена и перенесена в журнал")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ShowCompletedHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("{COMPLETED}")
+	rows, err := database.DB.Query("SELECT * FROM todo.completed")
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var createDate, deadline, appointmentDate, finishDate []uint8
+		err := rows.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate, &finishDate)
+		if err != nil {
+			panic(err)
+		}
+		t.CreateDate = string(createDate)
+		t.Deadline = string(deadline)
+		t.AppointmentDate = string(appointmentDate)
+		t.FinishDate = string(finishDate)
+		tasks = append(tasks, t)
+	}
+
+	err = TPL.ExecuteTemplate(w, "completed.html", tasks)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func UndoHandler(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		panic(err)
+	}
+	id := r.FormValue("id")
+
+	row := database.DB.QueryRow("SELECT * FROM todo.completed WHERE id=?;", id)
+	var t Task
+	var createDate, deadline, appointmentDate, finishDate []uint8
+	err = row.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate, &finishDate)
+	if err != nil {
+		panic(err)
+	}
+	t.CreateDate = string(createDate)
+	t.Deadline = string(deadline)
+	t.AppointmentDate = string(appointmentDate)
+	if t.Deadline == "" {
+		t.Deadline = "NULL"
+	} else {
+		t.Deadline = "'" + t.Deadline + "'"
+	}
+	if t.AppointmentDate == "" {
+		t.AppointmentDate = "NULL"
+	} else {
+		t.AppointmentDate = "'" + t.AppointmentDate + "'"
+	}
+	log.Println(t)
+
+	stmtInsert, err := database.DB.Prepare(fmt.Sprintf("INSERT INTO todo.tasks (id, name, comment, createDate, deadline, appointmentDate) VALUES (%s, '%s', '%s', '%s', %s, %s);", id, t.Name, t.Comment, t.CreateDate, t.Deadline, t.AppointmentDate))
+	if err != nil {
+		log.Println("stmt error")
+		panic(err)
+	}
+	defer stmtInsert.Close()
+
+	res, err := stmtInsert.Exec()
+	if err != nil {
+		log.Println("error insert in completed: ", err)
+		panic(err)
+	}
+	rowsAf, _ := res.RowsAffected()
+	if err != nil || rowsAf != 1 {
+		log.Println("Error insert in completed:", err)
+		err := TPL.ExecuteTemplate(w, "result.html", "Ошибка")
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	stmtDelete, err := database.DB.Prepare("DELETE FROM todo.completed WHERE (id = ?);")
+	if err != nil {
+		panic(err)
+	}
+	defer stmtDelete.Close()
+	res, err = stmtDelete.Exec(id)
+	if err != nil {
+		panic(err)
+	}
+	rowsAf, _ = res.RowsAffected()
+	if rowsAf != 1 {
+		log.Println("ERROR: ", rowsAf)
+	}
+
+	err = TPL.ExecuteTemplate(w, "result.html", "Задача возвращена")
 	if err != nil {
 		panic(err)
 	}

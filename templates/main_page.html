@@ -17,29 +17,34 @@
 <table>
     <tr>
         <td>
-    <form action="/show" method="POST">
-        <input type="submit" value="Показать все">
-    </form>
+            <form action="/show" method="POST">
+                <input type="submit" value="Показать все">
+            </form>
         </td>
         <td>
-    <form action="/add">
-        <input type="submit" value="Добавить новое задание">
-    </form>
+            <form action="/add">
+                <input type="submit" value="Добавить новое задание">
+            </form>
         </td>
         <td>
-    <form action="/sort">
-        <input type="submit" value="сортировать по:">
-        <select name="sort">
-            <option>дедлайну</option>
-            <option>дате создания</option>
-            <option>дате выполнения</option>
-        </select>
-    </form>
+            <form action="/sort">
+                <input type="submit" value="сортировать по:">
+                <select name="sort">
+                    <option>дедлайну</option>
+                    <option>дате создания</option>
+                    <option>дате выполнения</option>
+                </select>
+            </form>
         </td>
         <td>
-    <form action="/today">
-        <input type="submit" value="Сегодня">
-    </form>
+            <form action="/today">
+                <input type="submit" value="Сегодня">
+            </form>
+        </td>
+        <td>
+            <form action="/show_completed">
+                <input type="submit" value="Журнал">
+            </form>
         </td>
     </tr>
 </table>
@@ -47,7 +52,7 @@
     <h1>TASKS:</h1>
     <table class="tasks">
         <tr class="tasks">
-            <td class="tasks">ID</td>
+            <td class="tasks">Выполнить</td>
             <td class="tasks">Название</td>
             <td class="tasks">Комментарий</td>
             <td class="tasks">Дата создания</td>
@@ -58,7 +63,7 @@
         </tr>
         {{range .}}
             <tr class="tasks">
-                <td class="tasks">{{.ID}}</td>
+                <td class="tasks"><a href="/done/?id={{.ID}}" class="button">Готово</a></td>
                 <td class="tasks">{{.Name}}</td>
                 <td class="tasks">{{.Comment}}</td>
                 <td class="tasks">{{.CreateDate}}</td>
@@ -70,7 +75,7 @@
         {{end}}
     </table>
     {{else}}
-        <h3>no data</h3>
+        <h3>Задач нет</h3>
     {{end}}
 </body>
 </html>

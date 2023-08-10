@@ -1,0 +1,49 @@
+<html>
+<head>
+    <title>ToDo</title>
+    <style type="text/css">
+        .tasks {
+            border-collapse: collapse;
+            border: 3px solid #245488;
+        }
+
+        td, th {
+            padding: 10px 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<table>
+    {{if .}}
+    <h1>TASKS:</h1>
+    <table class="tasks">
+        <tr class="tasks">
+            <td class="tasks">Вернуть</td>
+            <td class="tasks">Название</td>
+            <td class="tasks">Комментарий</td>
+            <td class="tasks">Дата создания</td>
+            <td class="tasks">Дедлайн</td>
+            <td class="tasks">Заплалнировано на</td>
+            <td class="tasks">Изменить</td>
+            <td class="tasks">Удалить</td>
+        </tr>
+        {{range .}}
+            <tr class="tasks">
+                <td class="tasks"><a href="/undo/?id={{.ID}}" class="button">Не готово</a></td>
+                <td class="tasks">{{.Name}}</td>
+                <td class="tasks">{{.Comment}}</td>
+                <td class="tasks">{{.CreateDate}}</td>
+                <td class="tasks">{{.Deadline}}</td>
+                <td class="tasks">{{.AppointmentDate}}</td>
+                <td class="tasks">{{.FinishDate}}</td>
+                <td class="tasks"><a href="/update/?id={{.ID}}" class="button">Изменить</a></td>
+                <td class="tasks"><a href="/delete/?id={{.ID}}" class="button">Удалить</a></td>
+            </tr>
+        {{end}}
+    </table>
+    {{else}}
+        <h3>Задач нет</h3>
+    {{end}}
+</body>
+</html>
