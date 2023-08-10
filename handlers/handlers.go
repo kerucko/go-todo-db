@@ -1,17 +1,12 @@
-package main
+package handlers
 
 import (
-	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"html/template"
 	"log"
 	"net/http"
-)
-
-var (
-	tpl *template.Template
-	db  *sql.DB
+	"todo_db/database"
 )
 
 type Task struct {
@@ -23,38 +18,14 @@ type Task struct {
 	AppointmentDate string
 }
 
-func main() {
-	tpl, _ = template.ParseGlob("templates/*.html")
+var (
+	TPL *template.Template
+	//db  *sql.DB = database.DB
+)
 
-	var err error
-	db, err = sql.Open("mysql", "root:mysql_password1@tcp(localhost:3306)/todo")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
-
-	//http.HandleFunc("/", startHandler)
-	http.HandleFunc("/show", showTasksHandler)
-	http.HandleFunc("/add", addNewTaskHandler)
-	http.HandleFunc("/update/", updateTaskHandler)
-	http.HandleFunc("/update_result/", updateResultHandler)
-	http.HandleFunc("/delete/", deleteTaskHandler)
-	http.HandleFunc("/sort", SortHandler)
-	http.HandleFunc("/today", TodayHandler)
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func showTasksHandler(w http.ResponseWriter, r *http.Request) {
+func ShowTasksHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{MAIN}")
-	rows, err := db.Query("SELECT * FROM test")
+	rows, err := database.DB.Query("SELECT * FROM todo.test")
 	if err != nil {
 		panic(err)
 	}
@@ -74,23 +45,23 @@ func showTasksHandler(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, t)
 	}
 
-	err = tpl.ExecuteTemplate(w, "main_page.html", tasks)
+	err = TPL.ExecuteTemplate(w, "main_page.html", tasks)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func addNewTaskHandler(w http.ResponseWriter, r *http.Request) {
+func AddNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		log.Println("{ADD GET}")
-		tpl.ExecuteTemplate(w, "add_new_task.html", nil)
+		TPL.ExecuteTemplate(w, "add_new_task.html", nil)
 		return
 	}
 	log.Println("{ADD POST}")
 	r.ParseForm()
 	name := r.FormValue("name")
 	if name == "" {
-		err := tpl.ExecuteTemplate(w, "result.html", "Неправильные введенные данные")
+		err := TPL.ExecuteTemplate(w, "result.html", "Неправильные введенные данные")
 		if err != nil {
 			panic(err)
 		}
@@ -113,7 +84,7 @@ func addNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(name, comment, deadline, appointmentDate)
 
-	stmt, err := db.Prepare(fmt.Sprintf("INSERT INTO test (name, comment, createDate, deadline, appointmentDate) VALUES (%s, %s, NOW(), %s, %s);", name, comment, deadline, appointmentDate))
+	stmt, err := database.DB.Prepare(fmt.Sprintf("INSERT INTO todo.test (name, comment, createDate, deadline, appointmentDate) VALUES (%s, %s, NOW(), %s, %s);", name, comment, deadline, appointmentDate))
 	if err != nil {
 		log.Println("stmt error")
 		panic(err)
@@ -128,22 +99,22 @@ func addNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 	rowsAf, _ := res.RowsAffected()
 	if err != nil || rowsAf != 1 {
 		log.Println("Error insert:", err)
-		tpl.ExecuteTemplate(w, "result.html", "Ошибка")
+		TPL.ExecuteTemplate(w, "result.html", "Ошибка")
 		return
 	}
 
-	err = tpl.ExecuteTemplate(w, "result.html", "Задача добавлена успешно")
+	err = TPL.ExecuteTemplate(w, "result.html", "Задача добавлена успешно")
 	if err != nil {
 		panic(err)
 	}
 }
 
-func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	id := r.FormValue("id")
 	log.Println("{UPDATE", id, "}")
 
-	row := db.QueryRow("SELECT * FROM test WHERE (id = ?);", id)
+	row := database.DB.QueryRow("SELECT * FROM todo.test WHERE (id = ?);", id)
 
 	var t Task
 	var createDate, deadline, appointmentDate []uint8
@@ -156,13 +127,13 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	t.AppointmentDate = string(appointmentDate)
 	log.Println(t)
 
-	err = tpl.ExecuteTemplate(w, "update.html", t)
+	err = TPL.ExecuteTemplate(w, "update.html", t)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func updateResultHandler(w http.ResponseWriter, r *http.Request) {
+func UpdateResultHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{UPDATE RESULT}")
 	r.ParseForm()
 	id := r.FormValue("id")
@@ -184,7 +155,7 @@ func updateResultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(id, name, comment, deadline, appointmentDate)
 
-	stmt, err := db.Prepare(fmt.Sprintf("UPDATE test SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
+	stmt, err := database.DB.Prepare(fmt.Sprintf("UPDATE todo.test SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
 	if err != nil {
 		panic(err)
 	}
@@ -197,22 +168,22 @@ func updateResultHandler(w http.ResponseWriter, r *http.Request) {
 	rowsAf, _ := res.RowsAffected()
 	if rowsAf != 1 {
 		log.Println("Error: ", err)
-		tpl.ExecuteTemplate(w, "result.html", "Возникла ошибка, попробуйте еще раз")
+		TPL.ExecuteTemplate(w, "result.html", "Возникла ошибка, попробуйте еще раз")
 		return
 	}
 
-	err = tpl.ExecuteTemplate(w, "result.html", "Задача успешно обновлена")
+	err = TPL.ExecuteTemplate(w, "result.html", "Задача успешно обновлена")
 	if err != nil {
 		panic(err)
 	}
 }
 
-func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	id := r.FormValue("id")
 	log.Println("{DELETE", id, "}")
 
-	stmt, err := db.Prepare("DELETE FROM test WHERE (id = ?);")
+	stmt, err := database.DB.Prepare("DELETE FROM todo.test WHERE (id = ?);")
 	if err != nil {
 		panic(err)
 	}
@@ -226,7 +197,7 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("ERROR: ", rowsAf)
 	}
 
-	err = tpl.ExecuteTemplate(w, "result.html", "Задача успешно удалена")
+	err = TPL.ExecuteTemplate(w, "result.html", "Задача успешно удалена")
 	if err != nil {
 		panic(err)
 	}
@@ -237,14 +208,14 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 	filter := r.FormValue("sort")
 	var stmt string
 	if filter == "дедлайну" {
-		stmt = "SELECT * FROM test WHERE deadline IS NOT NULL ORDER BY deadline;"
+		stmt = "SELECT * FROM todo.test WHERE deadline IS NOT NULL ORDER BY deadline;"
 	} else if filter == "дате создания" {
-		stmt = "SELECT * FROM test WHERE createDate IS NOT NULL ORDER BY createDate;"
+		stmt = "SELECT * FROM todo.test WHERE createDate IS NOT NULL ORDER BY createDate;"
 	} else {
-		stmt = "SELECT * FROM test WHERE appointmentDate IS NOT NULL ORDER BY appointmentDate;"
+		stmt = "SELECT * FROM todo.test WHERE appointmentDate IS NOT NULL ORDER BY appointmentDate;"
 	}
 
-	rows, err := db.Query(stmt)
+	rows, err := database.DB.Query(stmt)
 	if err != nil {
 		panic(err)
 	}
@@ -264,7 +235,7 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, t)
 	}
 
-	err = tpl.ExecuteTemplate(w, "main_page.html", tasks)
+	err = TPL.ExecuteTemplate(w, "main_page.html", tasks)
 	if err != nil {
 		panic(err)
 	}
@@ -272,7 +243,7 @@ func SortHandler(w http.ResponseWriter, r *http.Request) {
 
 func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("{TODAY}")
-	rows, err := db.Query("SELECT * FROM test WHERE appointmentDate=DATE(NOW());")
+	rows, err := database.DB.Query("SELECT * FROM todo.test WHERE appointmentDate=DATE(NOW());")
 	if err != nil {
 		panic(err)
 	}
@@ -292,7 +263,7 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, t)
 	}
 
-	err = tpl.ExecuteTemplate(w, "main_page.html", tasks)
+	err = TPL.ExecuteTemplate(w, "main_page.html", tasks)
 	if err != nil {
 		panic(err)
 	}
