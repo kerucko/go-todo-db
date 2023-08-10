@@ -49,7 +49,7 @@
     </tr>
 </table>
     {{if .}}
-    <h1>TASKS:</h1>
+    <h1>Задачи:</h1>
     <table class="tasks">
         <tr class="tasks">
             <td class="tasks">Выполнить</td>
@@ -69,8 +69,8 @@
                 <td class="tasks">{{.CreateDate}}</td>
                 <td class="tasks">{{.Deadline}}</td>
                 <td class="tasks">{{.AppointmentDate}}</td>
-                <td class="tasks"><a href="/update/?id={{.ID}}" class="button">Изменить</a></td>
-                <td class="tasks"><a href="/delete/?id={{.ID}}" class="button">Удалить</a></td>
+                <td class="tasks"><a href="/update/?id={{.ID}}&from=tasks" class="button">Изменить</a></td>
+                <td class="tasks"><a href="/delete/?id={{.ID}}&from=tasks" class="button">Удалить</a></td>
             </tr>
         {{end}}
     </table>

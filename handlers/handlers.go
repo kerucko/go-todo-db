@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"html/template"
@@ -110,22 +111,32 @@ func AddNewTaskHandler(w http.ResponseWriter, r *http.Request) {
 func UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	id := r.FormValue("id")
+	from := r.FormValue("from")
 	log.Println("{UPDATE", id, "}")
 
-	row := database.DB.QueryRow("SELECT * FROM todo.tasks WHERE (id = ?);", id)
+	row := database.DB.QueryRow(fmt.Sprintf("SELECT * FROM todo.%s WHERE (id = %s);", from, id))
 
 	var t Task
-	var createDate, deadline, appointmentDate []uint8
-	err := row.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate)
+	var createDate, deadline, appointmentDate, finishDate []uint8
+	var err error
+	if from == "tasks" {
+		err = row.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate)
+	} else if from == "completed" {
+		err = row.Scan(&t.ID, &t.Name, &t.Comment, &createDate, &deadline, &appointmentDate, &finishDate)
+	}
 	if err != nil {
 		panic(err)
 	}
 	t.CreateDate = string(createDate)
 	t.Deadline = string(deadline)
 	t.AppointmentDate = string(appointmentDate)
+	t.FinishDate = string(finishDate)
 	log.Println(t)
 
-	err = TPL.ExecuteTemplate(w, "update.html", t)
+	err = TPL.ExecuteTemplate(w, "update.html", struct {
+		Data Task
+		From string
+	}{t, from})
 	if err != nil {
 		panic(err)
 	}
@@ -153,7 +164,22 @@ func UpdateResultHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(id, name, comment, deadline, appointmentDate)
 
-	stmt, err := database.DB.Prepare(fmt.Sprintf("UPDATE todo.tasks SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", name, comment, deadline, appointmentDate, id))
+	table := r.FormValue("from")
+
+	var stmt *sql.Stmt
+	var err error
+	if table == "tasks" {
+		stmt, err = database.DB.Prepare(fmt.Sprintf("UPDATE %s SET name=%s, comment=%s, deadline=%s, appointmentDate=%s WHERE id=%s;", table, name, comment, deadline, appointmentDate, id))
+	} else if table == "completed" {
+		finishDate := r.FormValue("finishDate")
+		if finishDate == "" {
+			finishDate = "NULL"
+		} else {
+			finishDate = "'" + finishDate + "'"
+		}
+
+		stmt, err = database.DB.Prepare(fmt.Sprintf("UPDATE %s SET name=%s, comment=%s, deadline=%s, appointmentDate=%s, finishDate=%s WHERE id=%s;", table, name, comment, deadline, appointmentDate, finishDate, id))
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -179,14 +205,24 @@ func UpdateResultHandler(w http.ResponseWriter, r *http.Request) {
 func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	id := r.FormValue("id")
+	from := r.FormValue("from")
 	log.Println("{DELETE", id, "}")
 
-	stmt, err := database.DB.Prepare("DELETE FROM todo.tasks WHERE (id = ?);")
+	var table string
+	if from == "1" {
+		table = "todo.tasks"
+	} else if from == "2" {
+		table = "todo.completed"
+	} else {
+		panic("error table")
+	}
+
+	stmt, err := database.DB.Prepare(fmt.Sprintf("DELETE FROM %s WHERE (id = %s);", table, id))
 	if err != nil {
 		panic(err)
 	}
 	defer stmt.Close()
-	res, err := stmt.Exec(id)
+	res, err := stmt.Exec()
 	if err != nil {
 		panic(err)
 	}

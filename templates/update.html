@@ -6,15 +6,19 @@
 </head>
 <body>
 <h1>ИЗМЕНИТЬ ЗАДАНИЕ</h1>
-<form action="/update_result/?id={{.ID}}" method="POST">
+<form action="/update_result/?id={{.Data.ID}}&from={{.From}}" method="POST">
   <label for="name">Название:</label><br>
-  <input type="text" id="name" name="name" value="{{.Name}}"><br><br>
+  <input type="text" id="name" name="name" value="{{.Data.Name}}"><br><br>
   <label for="comment">Комментарий:</label><br>
-  <textarea id="comment" name="comment" rows="4" cols="30">{{.Comment}}</textarea><br><br>
+  <textarea id="comment" name="comment" rows="4" cols="30">{{.Data.Comment}}</textarea><br><br>
   <label for="deadline">Дедлайн:</label><br>
-  <input type="date" id="deadline" name="deadline" value="{{.Deadline}}"><br><br>
+  <input type="date" id="deadline" name="deadline" value="{{.Data.Deadline}}"><br><br>
   <label for="appointmentDate">Запланировано на:</label><br>
-  <input type="date" id="appointmentDate" name="appointmentDate" value="{{.AppointmentDate}}"><br><br>
+  <input type="date" id="appointmentDate" name="appointmentDate" value="{{.Data.AppointmentDate}}"><br><br>
+  {{if .Data.FinishDate}}
+    <label for="finishDate">Время выполнения:</label><br>
+    <input type="date" id="finishDate" name="finishDate" value="{{.Data.FinishDate}}"><br><br>
+  {{end}}
   <input type="submit" value="Обновить">
 </form>
 
